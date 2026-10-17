@@ -1,53 +1,53 @@
-# GrandSave Order Desk for Vercel
+# GrandSave Wholesale for Vercel
 
-A private wholesale order desk with products, timed offers, orders, payments, balances, business settings and backup import/export.
+A wholesale portal with separate owner and customer access, built with Next.js and Supabase. Start with **DEPLOY-TO-VERCEL.md**.
 
-This edition uses standard Next.js, Supabase Authentication and Supabase Postgres. Start with **DEPLOY-TO-VERCEL.md**. It is a separate version of your app; the existing published Site continues to use its original database.
+The owner creates a customer access key and password from Customers. Customers sign in immediately; no public registration or email confirmation is needed. Customers can browse products and live offers, place orders, view their own dashboard, orders, payments and balance, and edit their account details. The owner manages products, offers, customer access, orders and payments.
 
-## Quick local start
+## Local start
 
-Use Node.js 24. Create a Supabase project, run `supabase/migrations/0001_desk_states.sql`, and create the owner account as explained in the deployment guide.
+Use Node.js 24. Run both migrations and the owner setup script in your Supabase project as described in the deployment guide. Copy `.env.example` to `.env.local`, supply the three values, then:
 
 ```sh
 npm ci
-cp .env.example .env.local
-# Fill the three values in .env.local, then:
 npm run dev
 ```
 
-Open the address printed by Next.js (normally http://localhost:3000), and sign in with the owner account you created in Supabase.
+Open the local address shown by Next.js. The owner signs in with their existing Supabase Auth email and password. Customers use their owner-issued access key and password.
 
 ```sh
+npm run typecheck
 npm run build
+npm test
 npm start
 ```
 
-## Required configuration
+Tests run against local simulated services and an embedded PostgreSQL engine. They do not create production users or orders. Build before running the HTTP integration tests.
 
-| Variable | Where to obtain the value |
+## Configuration
+
+| Variable | Purpose |
 | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project Connect panel: Project URL |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Same panel: publishable key; legacy anon key is also accepted |
-| `OWNER_EMAIL` | Exact email of the Supabase user permitted to use this desk |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable key; legacy anon key is also accepted |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only account creation and password resets, after owner authorization |
 
-No service-role key is used. `OWNER_EMAIL` stays on the server. Login requires both a valid Supabase session and the configured owner email. Database row-level policies restrict access to the authenticated user's own record. Keep public signups disabled in this private project.
+Never expose the service-role key to browser code or commit it. `OWNER_EMAIL` is no longer required. Owner permission comes from a protected database record created by `supabase/OWNER-SETUP.sql`; a user cannot select or edit their own role. Keep Supabase public signup disabled.
 
-## Moving existing records
+Customer passwords are handled by Supabase Auth, not stored in the application tables or returned by the API. Customer access keys are case insensitive. Optional contact email is separate from the login key. Owners can replace a customer's password; the current password cannot be retrieved.
 
-In the old desk, select Settings → Download backup. In this version, select Settings → Import backup. Review the record counts and choose Replace records. The import replaces this version's current records and settings; download a backup first if needed. Backup files are validated before saving. Importing data does not transfer login credentials or the old database account ID.
+## Existing records
+
+Migration 0002 preserves the previous `desk_states` records. The owner can open **Settings → Previous private desk** at `/legacy` to view those records and download or import the original JSON backups. They are not automatically converted into the new customer portal: each order must be associated with a customer account before it can be shared. New portal records are stored in the `wholesale_*` tables and remain in Supabase.
 
 ## Project layout
 
-- `app/desk.tsx`: main interface and backup import/export.
-- `app/login/`, `app/auth/actions.ts`: private email/password login and sign-out.
-- `lib/auth.ts`, `lib/supabase/`, `proxy.ts`: verified sessions and cookie refresh.
-- `app/api/state/route.ts`: load/save API with validation and atomic version checks.
-- `lib/desk-types.ts`, `lib/desk-state-validation.ts`: record types and checks.
-- `supabase/migrations/0001_desk_states.sql`: database table, grants and row policies.
-- `vercel.json`, `package.json`: Vercel and Next.js build setup.
+- `app/portal.tsx`, `app/portal.css`: owner and customer interface.
+- `app/api/portal/route.ts`: verified role checks, data loading, orders and owner actions.
+- `app/auth/actions.ts`, `lib/auth.ts`, `lib/access-key.ts`: sign-in, sign-out and protected roles.
+- `lib/supabase/admin.ts`: server-only customer account management.
+- `supabase/migrations/0002_wholesale_portal.sql`: customer isolation, catalogue, orders, payments and checked database functions.
+- `supabase/OWNER-SETUP.sql`: grants the existing owner account access.
+- `app/legacy/`, `app/desk.tsx`, `app/api/state/`: preserved previous private desk.
 
-## Checks
-
-`npm run typecheck` checks TypeScript. `npm run build` creates a standard Next.js production build. `npm test` runs the included tests; integration tests require a prior production build and use a local simulated Supabase service rather than a real account.
-
-The application code and SQL are supplied. Provisioning your Supabase project, running its SQL, creating your login user and configuring the Vercel project are required before real records can be saved.
+Order prices and customer identity are determined in the database. Checkout retries use a request ID to avoid duplicate orders. Payments cannot exceed an order's outstanding balance. Paid orders cannot be changed to Draft or Cancelled.

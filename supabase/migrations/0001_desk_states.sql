@@ -1,6 +1,6 @@
 -- Run once in the Supabase SQL Editor for your project.
 -- The application uses the signed-in user's session and a public/publishable key.
--- No service-role key is required or permitted in the application.
+-- The legacy desk's data requests use the verified user's session, never an admin key.
 begin;
 
 create table public.desk_states (

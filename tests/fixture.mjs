@@ -98,6 +98,11 @@ export async function startSupabaseFixture() {
         return reply(response, 200, {});
       }
 
+      if (url.pathname === "/rest/v1/rpc/wholesale_role" && request.method === "POST") {
+        return user ? reply(response, 200, user.id === owner.id ? "owner" : "customer")
+          : reply(response, 401, { code: "PGRST301", message: "Session required" });
+      }
+
       if (url.pathname === "/rest/v1/desk_states") {
         if (!user) return reply(response, 401, { code: "PGRST301", message: "Session required" });
         if (fixture.databaseFault) return reply(response, 503, fixture.databaseFault);

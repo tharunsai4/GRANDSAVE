@@ -75,7 +75,7 @@ describe("Production API with a local Supabase HTTP fixture", { timeout: 60000 }
     assert.match((await response.json()).error, /sign in/i);
     const save = await request({ cookie: "", method: "PUT", body: { state: exampleState(), version: 0 }, headers: claimedIdentity });
     assert.equal(save.status, 401);
-    assert.equal(fixture.requests.filter((entry) => entry.path.startsWith("/rest/")).length, 0);
+    assert.equal(fixture.requests.filter((entry) => entry.path === "/rest/v1/desk_states").length, 0);
   });
 
   it("rejects a valid Supabase session belonging to another account", async () => {
@@ -84,7 +84,7 @@ describe("Production API with a local Supabase HTTP fixture", { timeout: 60000 }
     const save = await request({ cookie: otherCookie, method: "PUT", body: { state: exampleState(), version: 0 } });
     assert.equal(save.status, 403);
     assert.equal(fixture.rows.size, 0);
-    assert.equal(fixture.requests.filter((entry) => entry.path.startsWith("/rest/")).length, 0);
+    assert.equal(fixture.requests.filter((entry) => entry.path === "/rest/v1/desk_states").length, 0);
   });
 
   it("rejects stale saves without overwriting the saved desk", async () => {
@@ -144,8 +144,8 @@ describe("Production API with a local Supabase HTTP fixture", { timeout: 60000 }
     assert.equal(fixture.rows.size, 0);
   });
 
-  it("fails closed with setup guidance when owner configuration is missing", async () => {
-    const unconfigured = await startProductionApp(fixture, { OWNER_EMAIL: "" });
+  it("fails closed with setup guidance when Supabase configuration is missing", async () => {
+    const unconfigured = await startProductionApp(fixture, { NEXT_PUBLIC_SUPABASE_URL: "" });
     try {
       const home = await fetch(unconfigured.url, { redirect: "manual" });
       assert.equal(home.status, 307);

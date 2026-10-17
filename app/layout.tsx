@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "GrandSave Order Desk",
-  description: "A private workspace for products, offers, orders and balances.",
+  title: "GrandSave Wholesale",
+  description: "Your GrandSave wholesale products, offers, orders and trade account.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

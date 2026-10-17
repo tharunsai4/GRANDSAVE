@@ -1,9 +1,9 @@
-import { requireDeskUser } from "../lib/auth";
-import Desk from "./desk";
+import { requirePortalUser } from "../lib/auth";
+import Portal from "./portal";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const user = await requireDeskUser();
-  return <Desk userName={user.displayName} />;
+  const user = await requirePortalUser();
+  return <Portal user={user} />;
 }

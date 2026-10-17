@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getDeskUser } from "../../../lib/auth";
 import { isDeskState } from "../../../lib/desk-state-validation";
-import { getOwnerEmail, getSupabaseConfig } from "../../../lib/supabase/config";
+import { getSupabaseConfig } from "../../../lib/supabase/config";
 import { createClient } from "../../../lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -27,9 +27,8 @@ function conflict() {
 type Access = { client: SupabaseClient; ownerId: string } | { response: Response };
 
 async function getAccess(): Promise<Access> {
-  const ownerEmail = getOwnerEmail();
-  if (!getSupabaseConfig() || !ownerEmail) {
-    return { response: json({ error: "The desk is not configured. Complete the Supabase and owner email settings." }, 503) };
+  if (!getSupabaseConfig()) {
+    return { response: json({ error: "The desk is not configured. Complete the Supabase settings." }, 503) };
   }
 
   try {
@@ -45,9 +44,6 @@ async function getAccess(): Promise<Access> {
         return { response: json({ error: "Sign-in could not be checked. Please try again." }, 503) };
       }
       return { response: json({ error: "Sign in required." }, 401) };
-    }
-    if (user.email.toLowerCase() !== ownerEmail.toLowerCase()) {
-      return { response: json({ error: "This account is not the configured desk owner." }, 403) };
     }
     return { client, ownerId: user.id };
   } catch {

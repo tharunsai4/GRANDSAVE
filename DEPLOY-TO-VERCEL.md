@@ -1,77 +1,92 @@
-# Deploy GrandSave Order Desk to Vercel
+# GrandSave Wholesale: deploy and upgrade
 
-You need a GitHub account, a Vercel account and a Supabase account. This package is the Vercel edition: use this ZIP rather than the earlier Sites source ZIP.
+Updated 18 October 2026. This edition uses owner-issued customer access keys and passwords. No customer email confirmation is required.
 
-## 1. Set up Supabase
+## 1. Prepare the database
 
-1. Open https://supabase.com/dashboard and create a project. Keep its database password in your own password manager.
-2. In the project, open **SQL Editor → New query**.
-3. Open `supabase/migrations/0001_desk_states.sql` from this package, copy its complete contents into SQL Editor and run it once. This creates the desk table and private access rules. If you already ran this migration successfully, do not rerun it.
-4. Open **Authentication → Providers / Sign In → Email**, and keep email/password sign-in enabled. In the authentication signup settings, turn off **Allow new users to sign up** for this private desk.
-5. Open **Authentication → Users → Add user / Create new user**. Create your own email/password user and mark its email as confirmed (Auto Confirm User). Choose the password yourself. There is no public signup form in this app.
-6. Open the project **Connect** panel (or Settings → API / API Keys). Copy the **Project URL** and **publishable key**. A legacy anon key works too. Do not use a service-role/secret key.
+Use the same Supabase project already connected to GrandSave.
 
-Your app password is the password of the user created in Authentication → Users. It is separate from the Supabase database password and from your Vercel/Supabase account passwords. Store that password securely. This edition includes sign-in and sign-out; it does not include a public signup or email-based password recovery flow.
+1. In SQL Editor, run `supabase/migrations/0001_desk_states.sql` only if you have never run it before.
+2. Run the complete `supabase/migrations/0002_wholesale_portal.sql` once. This adds the wholesale portal and preserves the previous private desk records. Do not rerun an already successful migration.
+3. Ensure your owner email/password user exists under Authentication → Users. If creating it, choose your own password and mark the owner email confirmed. This initial owner account is separate from customer accounts.
+4. Open `supabase/OWNER-SETUP.sql`, replace `YOUR_OWNER_EMAIL` with your existing owner's exact Auth email, and run it. It checks that the user exists and is confirmed, then grants owner access. It refuses to silently replace a different owner.
+5. Keep email/password sign-in enabled and **Allow new users to sign up** disabled. Customers are created by the authenticated owner inside GrandSave.
 
-## 2. Upload the code to GitHub
+Customer accounts created from GrandSave are automatically confirmed by the server, so customers do not need email messages or confirmation links. A customer cannot grant themselves owner access by changing their profile or sign-in data.
 
-1. Extract `GrandSave-Order-Desk-Vercel.zip`.
-2. Create a **private** GitHub repository.
-3. Upload everything inside the extracted `grandsave-order-desk-vercel` folder. `package.json` must be at the repository root. Include `app`, `lib`, `supabase`, `public`, the lockfile and configuration files.
-4. Include `.env.example` as a template. Keep any actual `.env.local` file out of GitHub.
+## 2. Set Vercel environment values
 
-## 3. Create the Vercel project
-
-1. Open https://vercel.com/new and import that GitHub repository.
-2. Set **Framework Preset** to **Next.js**. Keep **Root Directory** at the repository root (`./`).
-3. Use **Node.js 24.x**. The package declares this version already.
-4. Use the supplied settings: **Install Command** `npm ci`, **Build Command** `npm run build`. Leave **Output Directory** at the Next.js default.
-5. Under **Environment Variables**, add the following for Production and any Preview environment you intend to use:
+Under your GrandSave project → Settings → Environment Variables, configure:
 
 | Name | Value |
 | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase Project URL, such as `https://your-project.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Your Supabase publishable key |
-| `OWNER_EMAIL` | The exact email of the user you created in step 1 |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable key, or the existing legacy anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key, kept on the server |
 
-6. Click **Deploy**. When it succeeds, open the assigned `.vercel.app` address.
-7. Sign in with the email and password of your Supabase owner user.
-8. In Supabase **Authentication → URL Configuration**, set the **Site URL** to your new Vercel HTTPS address, especially before using future email invitation or password-recovery links. This version uses password sign-in and does not require an OAuth callback route.
+If the Supabase integration already supplies these values, reuse them. `NEXT_PUBLIC_SUPABASE_ANON_KEY` is also supported as a fallback for the public key. Do not add `NEXT_PUBLIC_` to the service-role key. Never put real keys in GitHub or chat. `OWNER_EMAIL` is no longer needed for authorization.
 
-If you change environment variables after deployment, redeploy so the app gets the new values. Vercel is your web host; Supabase is where the login accounts and saved records live.
+Apply settings to Production and any Preview environment you use. Changing environment values requires a new deployment. Vercel hosts the website; Supabase stores its accounts and business records.
 
-## 4. Confirm your desk works
+## 3. Publish the code
 
-1. Add a product and reload the page. The product should remain.
-2. Create a confirmed order and record a payment. Check that Balances updates.
-3. Use Settings → Download backup to keep a copy.
-4. Sign out, and confirm that opening the home page requires sign-in again.
+Extract the supplied code ZIP and update your existing repository with its contents. The directory containing `package.json` must be the Vercel root. Keep `.env.local`, `node_modules` and `.next` out of Git.
 
-## 5. Transfer records from your current site
+For the existing repository, after copying the code into your checkout:
 
-1. Sign in at https://grandsave-private-order-desk.zanywhale65.chatgpt.site and open Settings → Download backup.
-2. Sign in to the Vercel edition. Download a backup there first if it already has records you want to keep.
-3. Open Settings → Import backup and choose the old JSON file.
-4. Review the counts and click **Replace records**. Wait for **All changes saved**, then reload and check the transferred records.
+```sh
+git status
+git add .
+git commit -m "Add owner-managed customer access and wholesale portal"
+git push origin main
+```
 
-Data is transferred only when you import it. The source ZIP contains no live customer/product records or login credentials. The existing site stays available independently.
+If your origin still uses the other GitHub account, set it to your repository before pushing:
+
+```sh
+git remote set-url origin https://github.com/tharunsai4/GRANDSAVE.git
+```
+
+For a new Vercel project, import the repository, choose Next.js, Node.js 24.x, install command `npm ci`, build command `npm run build`, and keep the default output directory. Existing connected projects deploy automatically after the push. Wait for the Vercel deployment to show Ready before opening the production site.
+
+## 4. Give a customer access
+
+1. Sign in as the owner with your Supabase Auth email and password.
+2. Open **Customers → Create customer access**.
+3. Enter the customer's name/business, a unique access key (4–40 letters, numbers, hyphens or underscores, starting with a letter or number), and a password of at least 10 characters. Contact email is optional.
+4. Save. Give the website address, access key and password to that customer yourself.
+5. The customer signs in immediately using their access key and password.
+
+The password is shown only while you create or replace it. It cannot be retrieved later. Use **Reset password** on the customer's record to assign a replacement. Owner passwords cannot be changed from customer management.
+
+Customers see their own orders, payments and balance. They can browse active products and current offers, place orders, and edit their account information. Product, offer, order status, payment and customer access controls are reserved for the owner.
+
+## 5. Check the upgrade
+
+1. Create a product and a customer account.
+2. In a separate browser session, sign in with the customer's access key. Place an order and verify it appears in My orders.
+3. As owner, find that order and record a partial payment. Confirm the remaining balance in both accounts.
+4. Verify that a second customer cannot see the first customer's orders or payments.
+5. Sign out and verify that the portal asks for credentials again.
+
+For previous records, open **Settings → Previous private desk**. Those records remain private to the owner, with the original backup import/export. They are preserved separately until you explicitly associate historical orders with new customer accounts. New portal data is stored in Supabase's `wholesale_*` tables; use Supabase's database backup/export tools for those records.
 
 ## Troubleshooting
 
-| What you see | What to check |
+| Message or symptom | Action |
 | --- | --- |
-| Setup page instead of login | Add all three variables above and redeploy. |
-| Email or password incorrect | Use the manually created Supabase Auth user, a confirmed email and matching `OWNER_EMAIL`; the app does not use your previous ChatGPT login. |
-| Could not load/save your desk | Run the supplied SQL once in the same Supabase project used by the environment variables. Check the project's availability. |
-| Wrong account / access denied | Check `OWNER_EMAIL` and the owner user's confirmed email. Keep the supplied row policies enabled. |
-| Conflict after another tab changed data | Reload to get the latest saved version before editing again. |
-| Build cannot find package.json | Use the folder containing `package.json` as the GitHub/Vercel root. |
-| Backup rejected | Choose a GrandSave JSON backup under 5 MB whose compact records fit the 1 MB save limit; a spreadsheet or source-code ZIP is not a record backup. |
+| Setup page | Check the public Supabase URL/key and redeploy. |
+| Wholesale database needs setup | Run migration 0002 and OWNER-SETUP in the same Supabase project. |
+| Owner appears as inactive customer | Run OWNER-SETUP using that account's exact Auth email. |
+| Customer access setup incomplete | Add the server-only service-role key in Vercel, then redeploy. |
+| Access key or password incorrect | Check the issued key/password. The owner can assign a replacement password. |
+| Access key already in use | Choose another key or reset the existing account's password. |
+| Customer access inactive | Ask the owner to restore that customer's access. |
+| Old records absent from new dashboard | Open the previous private desk in Settings; the migration preserves them separately. |
 
-## Official references
+## Official documentation
 
-- Vercel deployment: https://vercel.com/docs/getting-started-with-vercel
-- Vercel Next.js: https://vercel.com/docs/frameworks/full-stack/nextjs
-- Vercel environment variables: https://vercel.com/docs/environment-variables
-- Supabase Next.js: https://supabase.com/docs/guides/getting-started/quickstarts/nextjs
-- Supabase server sessions: https://supabase.com/docs/guides/auth/server-side/nextjs
+- [Supabase admin account creation](https://supabase.com/docs/reference/javascript/auth-admin-createuser)
+- [Supabase authentication configuration](https://supabase.com/docs/guides/auth/general-configuration)
+- [Vercel environment variables](https://vercel.com/docs/environment-variables)
+- [Vercel Next.js deployment](https://vercel.com/docs/frameworks/full-stack/nextjs)
